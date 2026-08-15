@@ -10,7 +10,7 @@ The system is built to answer operational questions such as:
 - What evidence supports the answer?
 - Is there any contradiction between customer intent and live release information?
 
----
+
 
 ## 1. High-Level System Design
 
