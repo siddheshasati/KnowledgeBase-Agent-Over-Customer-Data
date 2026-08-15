@@ -4,6 +4,7 @@ from datetime import datetime
 
 from app.config import Settings
 from app.db.neo4j_store import Neo4jStore
+from app.db.qdrant_store import QdrantVectorStore
 from app.ingestion.parser import ParsedRecord, parse_dataset
 from app.models import IngestionRun
 from app.services.embeddings import EmbeddingService
@@ -12,10 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 class IngestionSynchronizer:
-    def __init__(self, settings: Settings, neo4j: Neo4jStore, embeddings: EmbeddingService):
+    def __init__(self, settings: Settings, neo4j: Neo4jStore, embeddings: EmbeddingService, vectors: QdrantVectorStore | None = None):
         self.settings = settings
         self.neo4j = neo4j
         self.embeddings = embeddings
+        self.vectors = vectors
 
     def create_run(self) -> IngestionRun:
         return IngestionRun(run_id=str(uuid.uuid4()), status="queued", started_at=datetime.utcnow())
@@ -25,15 +27,17 @@ class IngestionSynchronizer:
         try:
             records = parse_dataset(self.settings.dataset_dir)
             known_hashes = await self.neo4j.get_record_hashes()
-            active_ids = []
+            active_ids = [record.id for record in records]
+            deleted_ids = await self.neo4j.find_deleted_record_ids(active_ids)
             for record in records:
-                active_ids.append(record.id)
                 if known_hashes.get(record.id) == record.content_hash:
                     run.skipped_records += 1
                     continue
                 await self._upsert_record(record)
                 run.upserted_records += 1
             run.deleted_records = await self.neo4j.mark_records_deleted(active_ids)
+            if self.vectors and deleted_ids:
+                await self.vectors.delete_record_chunks(deleted_ids)
             run.status = "completed"
         except Exception as exc:
             logger.exception("Ingestion run failed")
@@ -50,6 +54,9 @@ class IngestionSynchronizer:
         for source_id, target_id, rel_type, props in record.relationships:
             await self.neo4j.upsert_relationship(source_id, target_id, rel_type, props)
         chunks = await self._chunks_for_record(record)
+        if self.vectors:
+            await self.vectors.delete_record_chunks([record.id])
+            await self.vectors.upsert_chunks(chunks)
         await self.neo4j.replace_chunks(record.id, chunks)
 
     async def _chunks_for_record(self, record: ParsedRecord) -> list[dict]:
@@ -59,6 +66,7 @@ class IngestionSynchronizer:
         return [
             {
                 "id": f"{record.id}:chunk:{idx}",
+                "record_id": record.id,
                 "text": chunk,
                 "embedding": embeddings[idx],
                 "source_file": record.source_file,

@@ -3,22 +3,29 @@ from collections import defaultdict
 
 from app.config import Settings
 from app.db.neo4j_store import Neo4jStore
+from app.db.qdrant_store import QdrantVectorStore
 from app.ingestion.parser import parse_dataset
 from app.models import Evidence, GraphEdge, GraphNode, GraphSnapshot, SourceType
 from app.services.embeddings import EmbeddingService
 
 
 class GraphRAGRetriever:
-    def __init__(self, settings: Settings, neo4j: Neo4jStore, embeddings: EmbeddingService):
+    def __init__(self, settings: Settings, neo4j: Neo4jStore, embeddings: EmbeddingService, vectors: QdrantVectorStore | None = None):
         self.settings = settings
         self.neo4j = neo4j
         self.embeddings = embeddings
+        self.vectors = vectors
 
     async def retrieve(self, query: str) -> list[Evidence]:
         if not self.neo4j.available:
             return self._local_retrieve(query)
-        query_embedding = await self.embeddings.embed(query, input_type="search_query")
-        semantic = await self.neo4j.semantic_search(query_embedding, self.settings.vector_top_k)
+        semantic = []
+        if self.vectors and self.vectors.available:
+            query_embedding = await self.embeddings.embed(query, input_type="search_query")
+            semantic = await self.vectors.search(query_embedding, self.settings.vector_top_k)
+        elif self.settings.vector_store.lower() == "neo4j":
+            query_embedding = await self.embeddings.embed(query, input_type="search_query")
+            semantic = await self.neo4j.semantic_search(query_embedding, self.settings.vector_top_k)
         fulltext = await self.neo4j.fulltext_search(_lucene_query(query), self.settings.graph_top_k)
         expanded = await self.neo4j.graph_expand(_lucene_query(query), self.settings.graph_top_k)
         analytics = await self.neo4j.analytics(query)

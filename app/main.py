@@ -9,6 +9,7 @@ from app.agent.orchestrator import KnowledgeAgent
 from app.config import get_settings
 from app.db.neo4j_store import Neo4jStore
 from app.db.postgres_store import PostgresChatStore
+from app.db.qdrant_store import QdrantVectorStore
 from app.ingestion.sync import IngestionSynchronizer
 from app.logging_config import configure_logging
 from app.models import ChatRequest, ChatResponse, GraphSnapshot, IngestionRun
@@ -26,15 +27,18 @@ async def lifespan(app: FastAPI):
     app.state.neo4j = Neo4jStore(settings)
     app.state.chat_store = PostgresChatStore(settings)
     app.state.embeddings = EmbeddingService(settings)
+    app.state.vectors = QdrantVectorStore(settings)
     app.state.live = LiveFlytBaseRetriever(settings)
-    app.state.graphrag = GraphRAGRetriever(settings, app.state.neo4j, app.state.embeddings)
+    app.state.graphrag = GraphRAGRetriever(settings, app.state.neo4j, app.state.embeddings, app.state.vectors)
     app.state.llm = LLMService(settings)
     app.state.agent = KnowledgeAgent(settings, app.state.graphrag, app.state.live, app.state.llm, app.state.chat_store)
-    app.state.ingestor = IngestionSynchronizer(settings, app.state.neo4j, app.state.embeddings)
+    app.state.ingestor = IngestionSynchronizer(settings, app.state.neo4j, app.state.embeddings, app.state.vectors)
     await app.state.chat_store.connect()
     await app.state.neo4j.connect()
+    await app.state.vectors.connect()
     yield
     await app.state.live.close()
+    await app.state.vectors.close()
     await app.state.neo4j.close()
     await app.state.chat_store.close()
 
@@ -56,7 +60,20 @@ async def index() -> FileResponse:
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok", "app": settings.app_name}
+    neo4j_status = "connected" if app.state.neo4j.available else "not_connected"
+    postgres_status = "connected" if app.state.chat_store.available else "memory_fallback"
+    qdrant_status = "connected" if app.state.vectors.available else "not_connected"
+    warnings = settings.configuration_warnings()
+    status = "ok" if neo4j_status == "connected" and qdrant_status == "connected" and not warnings else "degraded"
+    return {
+        "status": status,
+        "app": settings.app_name,
+        "neo4j": neo4j_status,
+        "vector_store": settings.vector_store,
+        "qdrant": qdrant_status,
+        "postgres": postgres_status,
+        "warnings": "; ".join(warnings),
+    }
 
 
 @app.post("/api/chat", response_model=ChatResponse)

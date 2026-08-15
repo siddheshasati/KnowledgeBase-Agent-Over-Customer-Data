@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     neo4j_user: str = "neo4j"
     neo4j_password: str = "password"
     neo4j_database: str = "neo4j"
+    vector_store: str = "qdrant"
+    neo4j_aura_client_id: str | None = None
+    neo4j_aura_client_secret: str | None = None
+
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str | None = None
+    qdrant_collection: str = "kb_agent_chunks"
 
     postgres_dsn: str = "postgresql://postgres:postgres@localhost:5432/kb_agent"
 
@@ -38,6 +45,19 @@ class Settings(BaseSettings):
     @property
     def live_hosts(self) -> set[str]:
         return {host.strip().lower() for host in self.live_docs_allowed_hosts.split(",") if host.strip()}
+
+    def configuration_warnings(self) -> list[str]:
+        warnings: list[str] = []
+        if self.vector_store.lower() != "qdrant":
+            warnings.append("VECTOR_STORE is not 'qdrant'; this build expects Qdrant for semantic retrieval.")
+        if self.neo4j_aura_client_id or self.neo4j_aura_client_secret:
+            warnings.append(
+                "NEO4J_AURA_CLIENT_ID/SECRET are Aura management credentials and cannot authenticate GraphRAG queries. "
+                "Use NEO4J_URI, NEO4J_USER, and NEO4J_PASSWORD from your Aura database instance."
+            )
+        if self.neo4j_password in {"", "password", "change-me"}:
+            warnings.append("NEO4J_PASSWORD is not configured with a real database password.")
+        return warnings
 
 
 @lru_cache

@@ -32,6 +32,9 @@ class Neo4jStore:
         self.available = False
 
     async def connect(self) -> None:
+        warnings = self.settings.configuration_warnings()
+        for warning in warnings:
+            logger.warning("Configuration warning: %s", warning)
         try:
             self.driver = AsyncGraphDatabase.driver(
                 self.settings.neo4j_uri,
@@ -67,12 +70,13 @@ class Neo4jStore:
             "CREATE CONSTRAINT chunk_id IF NOT EXISTS FOR (c:Chunk) REQUIRE c.id IS UNIQUE",
             "CREATE FULLTEXT INDEX entity_text IF NOT EXISTS FOR (e:Entity) ON EACH [e.name, e.title, e.text]",
             "CREATE FULLTEXT INDEX chunk_text IF NOT EXISTS FOR (c:Chunk) ON EACH [c.text]",
-            (
+        ]
+        if self.settings.vector_store.lower() == "neo4j":
+            statements.append(
                 "CREATE VECTOR INDEX chunk_embedding IF NOT EXISTS FOR (c:Chunk) ON (c.embedding) "
                 f"OPTIONS {{indexConfig: {{`vector.dimensions`: {self.settings.embedding_dim}, "
                 "`vector.similarity_function`: 'cosine'}}}"
-            ),
-        ]
+            )
         for statement in statements:
             await self.execute(statement)
 
@@ -102,6 +106,17 @@ class Neo4jStore:
             active_ids=list(active_ids),
         )
         return rows[0]["deleted"] if rows else 0
+
+    async def find_deleted_record_ids(self, active_ids: Iterable[str]) -> list[str]:
+        rows = await self.execute(
+            """
+            MATCH (r:SourceRecord)
+            WHERE NOT r.id IN $active_ids AND r.deleted_at IS NULL
+            RETURN r.id AS id
+            """,
+            active_ids=list(active_ids),
+        )
+        return [row["id"] for row in rows]
 
     async def upsert_entity(self, entity: dict[str, Any], source_record_id: str) -> None:
         label = entity.get("type", "Entity")
@@ -150,7 +165,6 @@ class Neo4jStore:
                 CREATE (c:Chunk {
                     id: $id,
                     text: $text,
-                    embedding: $embedding,
                     source_file: $source_file,
                     record_id: $record_id,
                     title: $title,
@@ -161,7 +175,12 @@ class Neo4jStore:
                 MERGE (r)-[:HAS_CHUNK]->(c)
                 """,
                 record_id=record_id,
-                **chunk,
+                id=chunk["id"],
+                text=chunk["text"],
+                source_file=chunk["source_file"],
+                title=chunk["title"],
+                entity_type=chunk["entity_type"],
+                content_hash=chunk["content_hash"],
             )
 
     async def get_record_hashes(self) -> dict[str, str]:

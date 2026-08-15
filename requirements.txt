@@ -14,3 +14,4 @@ tenacity==9.1.2
 numpy==2.3.2
 orjson==3.11.1
 python-multipart==0.0.20
+qdrant-client==1.15.1

@@ -55,7 +55,10 @@ async function checkHealth() {
   try {
     const response = await fetch("/health");
     const data = await response.json();
-    $("#healthText").textContent = data.status === "ok" ? "API online" : "Service degraded";
+    $("#healthText").textContent =
+      data.status === "ok"
+        ? "API online"
+        : `Degraded: Neo4j ${data.neo4j}, Qdrant ${data.qdrant}, Postgres ${data.postgres}`;
   } catch {
     $("#healthText").textContent = "API offline";
   }
