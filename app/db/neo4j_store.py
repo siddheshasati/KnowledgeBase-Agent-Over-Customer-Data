@@ -45,7 +45,34 @@ class Neo4jStore:
         self.settings = settings
         self.driver: AsyncDriver | None = None
         self.available = False
-Do
+
+    async def connect(self) -> None:
+        warnings = self.settings.configuration_warnings()
+        for warning in warnings:
+            logger.warning("Configuration warning: %s", warning)
+        
+        import asyncio
+        retries = 5
+        delay = 2
+        for attempt in range(retries):
+            try:
+                self.driver = AsyncGraphDatabase.driver(
+                    self.settings.neo4j_uri,
+                    auth=(self.settings.neo4j_user, self.settings.neo4j_password),
+                )
+                await self.driver.verify_connectivity()
+                self.available = True
+                await self.ensure_schema()
+                logger.info("Connected to Neo4j on attempt %d", attempt + 1)
+                return
+            except Exception as exc:
+                self.available = False
+                if attempt == retries - 1:
+                    logger.warning("Neo4j unavailable after %d attempts; graph operations will return empty results: %s", retries, exc)
+                else:
+                    logger.warning("Neo4j connection attempt %d failed; retrying in %ds... Error: %s", attempt + 1, delay, exc)
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, 10)
 
     async def close(self) -> None:
         if self.driver:
