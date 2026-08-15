@@ -1,0 +1,60 @@
+services:
+  - type: web
+    name: knowledge-base-agent
+    env: python
+    plan: free
+    region: oregon
+    pythonVersion: 3.11
+    buildCommand: "pip install --prefer-binary -r requirements.txt"
+    startCommand: "gunicorn -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT app.main:app"
+    healthCheckPath: "/health"
+    autoDeploy: true
+    envVars:
+      - key: APP_NAME
+        value: FlytBase Knowledge Intelligence
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATASET_DIR
+        value: se-dataset
+      - key: VECTOR_STORE
+        value: qdrant
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USER
+        sync: false
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: NEO4J_DATABASE
+        value: neo4j
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION
+        value: kb_agent_chunks
+      - key: POSTGRES_DSN
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: COHERE_API_KEY
+        sync: false
+      - key: COHERE_EMBED_MODEL
+        value: embed-english-v3.0
+      - key: EMBEDDING_DIM
+        value: "1024"
+      - key: LIVE_DOCS_ALLOWED_HOSTS
+        value: docs.flytbase.com,releases.flytbase.com
+      - key: LIVE_FETCH_TIMEOUT_SECONDS
+        value: "12"
+      - key: LIVE_MAX_PAGES
+        value: "6"
+      - key: GRAPH_TOP_K
+        value: "10"
+      - key: VECTOR_TOP_K
+        value: "8"
+      - key: EVIDENCE_TOP_K
+        value: "8"
