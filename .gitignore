@@ -14,5 +14,3 @@ data/runtime/
 server.err.log
 chat_history.sqlite3
 server.out.log
-server.out.log
-server.out.log
