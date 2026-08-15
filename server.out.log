@@ -1,0 +1,50 @@
+2026-08-15 14:33:15,623 WARNING app.db.postgres_store Postgres unavailable; chat history will use process memory: Psycopg cannot use the 'ProactorEventLoop' to run in async mode. Please use a compatible event loop, for instance by setting 'asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())'
+2026-08-15 14:33:19,718 WARNING app.db.neo4j_store Neo4j unavailable; graph operations will return empty results: Couldn't connect to localhost:7687 (resolved to ('[::1]:7687', '127.0.0.1:7687')):
+Failed to establish connection to ResolvedIPv6Address(('::1', 7687, 0, 0)) (reason [WinError 1225] The remote computer refused the network connection)
+Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [WinError 1225] The remote computer refused the network connection)
+INFO:     127.0.0.1:64734 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64734 - "GET /static/styles.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64163 - "GET /static/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64734 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64163 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60866 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60866 - "GET /static/styles.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56142 - "GET /static/app.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56142 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60866 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56142 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49332 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53258 - "POST /api/ingest/sync-now HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53258 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53258 - "POST /api/ingest/sync-now HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53258 - "GET /api/graph HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53258 - "POST /api/chat HTTP/1.1" 200 OK
+2026-08-15 14:44:15,830 INFO httpx HTTP Request: GET https://docs.flytbase.com/sitemap.xml "HTTP/1.1 200 OK"
+2026-08-15 14:44:15,947 INFO httpx HTTP Request: GET https://docs.flytbase.com/sitemap-pages.xml "HTTP/1.1 200 OK"
+2026-08-15 14:44:19,272 INFO httpx HTTP Request: GET https://docs.flytbase.com/sitemap_index.xml "HTTP/1.1 404 Not Found"
+2026-08-15 14:44:19,757 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations "HTTP/1.1 200 OK"
+2026-08-15 14:44:20,001 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/how-to-control-your-drone/drone-access-control "HTTP/1.1 200 OK"
+2026-08-15 14:44:20,005 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/how-to-control-your-drone "HTTP/1.1 200 OK"
+2026-08-15 14:44:20,010 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/multi-view-dashboard "HTTP/1.1 200 OK"
+2026-08-15 14:44:20,108 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/fleet-management "HTTP/1.1 200 OK"
+2026-08-15 14:44:20,285 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/how-to-control-your-drone/manual-drone-controls "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:53258 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64687 - "POST /api/ingest/sync-now HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64687 - "GET /api/graph HTTP/1.1" 200 OK
+2026-08-15 14:45:10,441 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/how-to-control-your-drone/drone-access-control "HTTP/1.1 200 OK"
+2026-08-15 14:45:10,452 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/multi-view-dashboard "HTTP/1.1 200 OK"
+2026-08-15 14:45:10,464 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/fleet-management "HTTP/1.1 200 OK"
+2026-08-15 14:45:10,466 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/how-to-control-your-drone/manual-drone-controls "HTTP/1.1 200 OK"
+2026-08-15 14:45:10,609 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations/how-to-control-your-drone "HTTP/1.1 200 OK"
+2026-08-15 14:45:10,713 INFO httpx HTTP Request: GET https://docs.flytbase.com/in-flight-modules/how-to-manage-your-flight-operations "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:58207 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54982 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54982 - "GET /openapi.json HTTP/1.1" 200 OK

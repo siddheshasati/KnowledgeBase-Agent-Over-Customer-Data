@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FlytBase Knowledge Intelligence</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="rail">
+        <div class="brand">
+          <span class="mark"></span>
+          <div>
+            <strong>Knowledge Intelligence</strong>
+            <small>GraphRAG command surface</small>
+          </div>
+        </div>
+        <nav class="tabs" aria-label="Primary views">
+          <button class="tab active" data-view="chat">Workspace</button>
+          <button class="tab" data-view="graph">Knowledge Base</button>
+          <button class="tab" data-view="history">History</button>
+        </nav>
+        <section class="status-panel">
+          <span class="status-dot"></span>
+          <div>
+            <strong id="healthText">Checking services</strong>
+            <small>Neo4j, Postgres, live docs</small>
+          </div>
+        </section>
+        <button id="ingestBtn" class="secondary-btn" type="button">Sync customer records</button>
+        <div class="demo-prompts">
+          <button data-prompt="Which accounts requested offline mission caching and what is the request status?">Customer request</button>
+          <button data-prompt="How do FlytBase docs describe API integrations or webhooks?">Product docs</button>
+          <button data-prompt="What customers requested custom geofence shapes and is that capability supported or released?">Cross-source</button>
+          <button data-prompt="What are the most requested features by customer accounts?">Analytics</button>
+          <button data-prompt="Which requested features appear to be already shipped in release notes?">Contradictions</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section id="chatView" class="view active">
+          <header class="workspace-header">
+            <div>
+              <p class="eyebrow">Enterprise GraphRAG Agent</p>
+              <h1>Ask across customer records, live docs, and release notes.</h1>
+            </div>
+            <div class="confidence-pill" id="confidencePill">No answer yet</div>
+          </header>
+
+          <section class="answer-grid">
+            <article class="answer-panel">
+              <div class="panel-title">
+                <span>Grounded Answer</span>
+                <small id="conversationId">New conversation</small>
+              </div>
+              <div id="answer" class="answer empty">Run a customer, product, or cross-source question.</div>
+              <form id="chatForm" class="composer">
+                <textarea id="messageInput" rows="3" placeholder="Ask about accounts, issues, feature requests, plans, docs, releases, or contradictions..."></textarea>
+                <button type="submit">Ask agent</button>
+              </form>
+            </article>
+
+            <aside class="side-stack">
+              <article class="mini-panel">
+                <div class="panel-title"><span>Execution Steps</span></div>
+                <div id="steps" class="step-list"></div>
+              </article>
+              <article class="mini-panel">
+                <div class="panel-title"><span>Contradictions</span></div>
+                <div id="contradictions" class="notice-list"></div>
+              </article>
+            </aside>
+          </section>
+
+          <section class="evidence-layout">
+            <article class="evidence-column">
+              <h2>Customer Evidence</h2>
+              <div id="customerEvidence" class="cards"></div>
+            </article>
+            <article class="evidence-column">
+              <h2>Product Documentation</h2>
+              <div id="productEvidence" class="cards"></div>
+            </article>
+            <article class="evidence-column">
+              <h2>Release Evidence</h2>
+              <div id="releaseEvidence" class="cards"></div>
+            </article>
+          </section>
+        </section>
+
+        <section id="graphView" class="view">
+          <header class="workspace-header compact">
+            <div>
+              <p class="eyebrow">Knowledge Base</p>
+              <h1>Entity graph from synchronized customer records.</h1>
+            </div>
+            <button id="refreshGraphBtn" class="secondary-btn" type="button">Refresh graph</button>
+          </header>
+          <section class="graph-stage">
+            <canvas id="graphCanvas"></canvas>
+            <div class="graph-legend">
+              <span><i class="legend account"></i>Account</span>
+              <span><i class="legend feature"></i>Feature</span>
+              <span><i class="legend issue"></i>Issue</span>
+              <span><i class="legend person"></i>Person</span>
+            </div>
+          </section>
+          <div id="graphMeta" class="graph-meta"></div>
+        </section>
+
+        <section id="historyView" class="view">
+          <header class="workspace-header compact">
+            <div>
+              <p class="eyebrow">Conversation Memory</p>
+              <h1>Recent grounded turns are stored in Postgres when configured.</h1>
+            </div>
+          </header>
+          <div id="historyList" class="history-list"></div>
+        </section>
+      </main>
+    </div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
