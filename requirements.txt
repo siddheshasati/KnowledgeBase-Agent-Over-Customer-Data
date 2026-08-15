@@ -16,3 +16,8 @@ orjson==3.11.1
 python-multipart==0.0.20
 qdrant-client==1.15.1
 gunicorn==23.0.0
+
+
+
+
+
