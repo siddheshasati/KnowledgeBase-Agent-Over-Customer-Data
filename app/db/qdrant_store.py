@@ -19,15 +19,25 @@ class QdrantVectorStore:
         self.available = False
 
     async def connect(self) -> None:
-        try:
-            self.client = AsyncQdrantClient(url=self.settings.qdrant_url, api_key=self.settings.qdrant_api_key or None)
-            await self.client.get_collections()
-            await self.ensure_collection()
-            self.available = True
-            logger.info("Connected to Qdrant")
-        except Exception as exc:
-            self.available = False
-            logger.warning("Qdrant unavailable; semantic retrieval will use local fallback: %s", exc)
+        import asyncio
+        retries = 5
+        delay = 2
+        for attempt in range(retries):
+            try:
+                self.client = AsyncQdrantClient(url=self.settings.qdrant_url, api_key=self.settings.qdrant_api_key or None)
+                await self.client.get_collections()
+                await self.ensure_collection()
+                self.available = True
+                logger.info("Connected to Qdrant on attempt %d", attempt + 1)
+                return
+            except Exception as exc:
+                self.available = False
+                if attempt == retries - 1:
+                    logger.warning("Qdrant unavailable after %d attempts; semantic retrieval will use local fallback: %s", retries, exc)
+                else:
+                    logger.warning("Qdrant connection attempt %d failed; retrying in %ds... Error: %s", attempt + 1, delay, exc)
+                    await asyncio.sleep(delay)
+                    delay = min(delay * 2, 10)
 
     async def close(self) -> None:
         if self.client:

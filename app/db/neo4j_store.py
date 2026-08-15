@@ -45,23 +45,7 @@ class Neo4jStore:
         self.settings = settings
         self.driver: AsyncDriver | None = None
         self.available = False
-
-    async def connect(self) -> None:
-        warnings = self.settings.configuration_warnings()
-        for warning in warnings:
-            logger.warning("Configuration warning: %s", warning)
-        try:
-            self.driver = AsyncGraphDatabase.driver(
-                self.settings.neo4j_uri,
-                auth=(self.settings.neo4j_user, self.settings.neo4j_password),
-            )
-            await self.driver.verify_connectivity()
-            self.available = True
-            await self.ensure_schema()
-            logger.info("Connected to Neo4j")
-        except Exception as exc:
-            self.available = False
-            logger.warning("Neo4j unavailable; graph operations will return empty results: %s", exc)
+Do
 
     async def close(self) -> None:
         if self.driver:

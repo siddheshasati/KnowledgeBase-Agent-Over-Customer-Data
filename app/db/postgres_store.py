@@ -31,15 +31,24 @@ class PostgresChatStore:
 
     async def connect(self) -> None:
         if AsyncConnection is not None and dict_row is not None and Jsonb is not None:
-            try:
-                self.conn = await AsyncConnection.connect(self.settings.postgres_dsn, row_factory=dict_row)
-                await self.ensure_schema()
-                self.available = True
-                self.persistence_mode = "postgres"
-                logger.info("Connected to Postgres")
-                return
-            except Exception as exc:
-                logger.warning("Postgres unavailable; falling back to SQLite: %s", exc)
+            import asyncio
+            retries = 5
+            delay = 2
+            for attempt in range(retries):
+                try:
+                    self.conn = await AsyncConnection.connect(self.settings.postgres_dsn, row_factory=dict_row)
+                    await self.ensure_schema()
+                    self.available = True
+                    self.persistence_mode = "postgres"
+                    logger.info("Connected to Postgres on attempt %d", attempt + 1)
+                    return
+                except Exception as exc:
+                    if attempt == retries - 1:
+                        logger.warning("Postgres unavailable after %d attempts; falling back to SQLite: %s", retries, exc)
+                    else:
+                        logger.warning("Postgres connection attempt %d failed; retrying in %ds... Error: %s", attempt + 1, delay, exc)
+                        await asyncio.sleep(delay)
+                        delay = min(delay * 2, 10)
 
         self.persistence_mode = "sqlite"
         self.sqlite_conn = sqlite3.connect(self.sqlite_path)
