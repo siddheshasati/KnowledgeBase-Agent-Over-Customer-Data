@@ -8,7 +8,7 @@ databases:
 services:
   - type: web
     name: knowledge-base-agent
-    env: python
+    runtime: python
     plan: free
     region: oregon
     buildCommand: "pip install --prefer-binary -r requirements.txt"
@@ -82,8 +82,8 @@ services:
 
   - type: pserv
     name: qdrant
-    env: docker
-    dockerImage: qdrant/qdrant:v1.11.5
+    runtime: image
+    image: qdrant/qdrant:v1.11.5
     plan: starter
     region: oregon
     disk:
@@ -96,8 +96,8 @@ services:
 
   - type: pserv
     name: neo4j
-    env: docker
-    dockerImage: neo4j:5.23-community
+    runtime: image
+    image: neo4j:5.23-community
     plan: starter
     region: oregon
     disk:
