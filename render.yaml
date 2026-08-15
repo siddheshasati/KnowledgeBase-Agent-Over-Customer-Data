@@ -1,3 +1,10 @@
+databases:
+  - name: knowledge-base-postgres
+    databaseName: kb_agent
+    user: postgres
+    plan: free
+    region: oregon
+
 services:
   - type: web
     name: knowledge-base-agent
@@ -24,21 +31,26 @@ services:
       - key: VECTOR_STORE
         value: qdrant
       - key: NEO4J_URI
-        sync: false
+        value: bolt://neo4j:7687
       - key: NEO4J_USER
-        sync: false
+        value: neo4j
       - key: NEO4J_PASSWORD
-        sync: false
+        value: Neo4jSecure2024!
       - key: NEO4J_DATABASE
         value: neo4j
       - key: QDRANT_URL
-        sync: false
+        value: http://qdrant:6333
       - key: QDRANT_API_KEY
-        sync: false
+        fromService:
+          name: qdrant
+          type: pserv
+          envVarKey: QDRANT__SERVICE__API_KEY
       - key: QDRANT_COLLECTION
         value: kb_agent_chunks
       - key: POSTGRES_DSN
-        sync: false
+        fromDatabase:
+          name: knowledge-base-postgres
+          property: connectionString
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
@@ -62,5 +74,32 @@ services:
       - key: EVIDENCE_TOP_K
         value: "8"
 
+  - type: pserv
+    name: qdrant
+    env: docker
+    dockerImage: qdrant/qdrant:v1.11.5
+    plan: starter
+    region: oregon
+    disk:
+      name: qdrant-data
+      mountPath: /qdrant/storage
+      sizeGB: 10
+    envVars:
+      - key: QDRANT__SERVICE__API_KEY
+        generateValue: true
 
-# HI
+  - type: pserv
+    name: neo4j
+    env: docker
+    dockerImage: neo4j:5.23-community
+    plan: starter
+    region: oregon
+    disk:
+      name: neo4j-data
+      mountPath: /data
+      sizeGB: 10
+    envVars:
+      - key: NEO4J_AUTH
+        value: neo4j/Neo4jSecure2024!
+      - key: NEO4J_PLUGINS
+        value: '["apoc"]'
