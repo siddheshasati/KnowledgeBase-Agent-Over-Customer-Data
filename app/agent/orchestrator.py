@@ -53,14 +53,31 @@ class KnowledgeAgent:
         contradictions = self._detect_contradictions(evidence)
         grounded = await self.llm.grounded_answer(request.message, evidence[: self.settings.evidence_top_k], contradictions)
         customer, product, release = self._split_evidence(evidence)
+        confidence_score = self._confidence_score(evidence, contradictions, plan.sources)
         confidence = self._confidence(evidence, contradictions, plan.sources)
         warnings = self._warnings(evidence, plan.sources)
         links = sorted({item.url for item in evidence if item.url})
 
+        concise_answer = grounded.get("concise_answer")
+        if isinstance(concise_answer, list):
+            concise_answer = " ".join(str(item) for item in concise_answer if item)
+        if not isinstance(concise_answer, str) or not concise_answer.strip():
+            concise_answer = "The available information is insufficient to answer this question."
+
+        reasoning_summary = grounded.get("reasoning_summary")
+        if not isinstance(reasoning_summary, str) or not reasoning_summary.strip():
+            reasoning_summary = "The answer was generated only from retrieved evidence."
+
+        follow_up_questions = grounded.get("follow_up_questions")
+        if isinstance(follow_up_questions, str):
+            follow_up_questions = [follow_up_questions]
+        elif not isinstance(follow_up_questions, list):
+            follow_up_questions = []
+
         response = ChatResponse(
             conversation_id=conversation_id,
-            concise_answer=grounded.get("concise_answer") or "The available information is insufficient to answer this question.",
-            reasoning_summary=grounded.get("reasoning_summary") or "The answer was generated only from retrieved evidence.",
+            concise_answer=concise_answer,
+            reasoning_summary=reasoning_summary,
             customer_evidence=customer[: self.settings.evidence_top_k],
             product_evidence=product[: self.settings.evidence_top_k],
             release_evidence=release[: self.settings.evidence_top_k],
@@ -69,7 +86,8 @@ class KnowledgeAgent:
             warnings=warnings,
             retrieval_steps=steps,
             confidence=confidence,
-            follow_up_questions=grounded.get("follow_up_questions") or [],
+            confidence_score=confidence_score,
+            follow_up_questions=[str(item) for item in follow_up_questions if item],
         )
         await self.chat_store.add_message(
             conversation_id,
@@ -205,15 +223,26 @@ class KnowledgeAgent:
         release = [item for item in evidence if item.source_type == SourceType.live_release_notes]
         return customer, product, release
 
+    def _confidence_score(self, evidence: list[Evidence], contradictions: list[Contradiction], sources: list[SourceType]) -> float:
+        if not evidence:
+            return 0.0
+        base = min(1.0, len(evidence) / max(1, self.settings.max_evidence_items))
+        source_coverage = len({item.source_type for item in evidence}) / max(1, len(sources))
+        contradiction_penalty = 0.30 if contradictions else 0.0
+        score = min(1.0, max(0.0, base * 0.6 + source_coverage * 0.4 - contradiction_penalty))
+        return round(score, 3)
+
     def _confidence(self, evidence: list[Evidence], contradictions: list[Contradiction], sources: list[SourceType]) -> str:
-        present = {item.source_type for item in evidence}
+        score = self._confidence_score(evidence, contradictions, sources)
         if not evidence:
             return "insufficient"
-        if contradictions:
+        if contradictions and score < self.settings.rag_min_confidence:
             return "mixed"
-        if all(source in present for source in sources):
+        if score >= 0.8:
             return "grounded"
-        return "partial"
+        if score >= self.settings.rag_min_confidence:
+            return "partial"
+        return "insufficient"
 
     def _warnings(self, evidence: list[Evidence], sources: list[SourceType]) -> list[str]:
         present = {item.source_type for item in evidence}

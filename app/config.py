@@ -13,15 +13,15 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     dataset_dir: Path = Path("se-dataset")
 
-    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_uri: str = "bolt://127.0.0.1:7687"
     neo4j_user: str = "neo4j"
-    neo4j_password: str = "password"
+    neo4j_password: str = "Neo4jSecure2024!"
     neo4j_database: str = "neo4j"
     vector_store: str = "qdrant"
     neo4j_aura_client_id: str | None = None
     neo4j_aura_client_secret: str | None = None
 
-    qdrant_url: str = "http://localhost:6333"
+    qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_api_key: str | None = None
     qdrant_collection: str = "kb_agent_chunks"
 
@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     graph_top_k: int = 10
     vector_top_k: int = 8
     evidence_top_k: int = 8
+    max_evidence_items: int = 8
+    rag_temperature: float = 0.1
+    rag_top_p: float = 0.9
+    rag_top_k: int = 5
+    rag_min_confidence: float = 0.55
+    rag_max_tokens: int = 512
 
     @property
     def live_hosts(self) -> set[str]:
@@ -55,7 +61,7 @@ class Settings(BaseSettings):
                 "NEO4J_AURA_CLIENT_ID/SECRET are Aura management credentials and cannot authenticate GraphRAG queries. "
                 "Use NEO4J_URI, NEO4J_USER, and NEO4J_PASSWORD from your Aura database instance."
             )
-        if self.neo4j_password in {"", "password", "change-me"}:
+        if self.neo4j_password in {"", "password", "change-me", "neo4j"}:
             warnings.append("NEO4J_PASSWORD is not configured with a real database password.")
         return warnings
 

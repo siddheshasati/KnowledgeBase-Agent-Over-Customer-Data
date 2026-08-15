@@ -11,3 +11,8 @@ logs/
 data/runtime/
 *.db
 .env.example
+server.err.log
+chat_history.sqlite3
+server.out.log
+server.out.log
+server.out.log

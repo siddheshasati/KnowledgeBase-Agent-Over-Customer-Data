@@ -1,3 +1,4 @@
+import json
 import logging
 from collections.abc import Iterable
 from typing import Any
@@ -9,6 +10,20 @@ from app.config import Settings
 from app.models import Evidence, GraphEdge, GraphNode, GraphSnapshot, SourceType
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_neo4j_value(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (list, tuple, set)):
+        return [_sanitize_neo4j_value(item) for item in value]
+    if isinstance(value, dict):
+        return json.dumps({str(key): _sanitize_neo4j_value(item) for key, item in value.items()}, default=str, sort_keys=True)
+    return str(value)
+
+
+def _sanitize_neo4j_props(props: dict[str, Any]) -> dict[str, Any]:
+    return {str(key): _sanitize_neo4j_value(value) for key, value in props.items()}
 
 
 ENTITY_LABELS = {
@@ -57,7 +72,7 @@ class Neo4jStore:
             return []
         try:
             async with self.driver.session(database=self.settings.neo4j_database) as session:
-                result = await session.run(cypher, **params)
+                result = await session.run(cypher, parameters=params)
                 return [record.data() async for record in result]
         except (Neo4jError, ServiceUnavailable) as exc:
             logger.error("Neo4j query failed: %s", exc)
@@ -81,6 +96,7 @@ class Neo4jStore:
             await self.execute(statement)
 
     async def upsert_source_record(self, record: dict[str, Any]) -> None:
+        safe_props = _sanitize_neo4j_props(record)
         await self.execute(
             """
             MERGE (r:SourceRecord {id: $id})
@@ -89,7 +105,7 @@ class Neo4jStore:
                 r.last_seen_at = datetime()
             """,
             id=record["id"],
-            props=record,
+            props=safe_props,
         )
 
     async def mark_records_deleted(self, active_ids: Iterable[str]) -> int:
@@ -121,6 +137,7 @@ class Neo4jStore:
     async def upsert_entity(self, entity: dict[str, Any], source_record_id: str) -> None:
         label = entity.get("type", "Entity")
         extra_label = f":{label}" if label in ENTITY_LABELS else ""
+        safe_props = _sanitize_neo4j_props(entity)
         await self.execute(
             f"""
             MERGE (e:Entity{extra_label} {{id: $id}})
@@ -131,12 +148,13 @@ class Neo4jStore:
             MERGE (r)-[:MENTIONS]->(e)
             """,
             id=entity["id"],
-            props=entity,
+            props=safe_props,
             source_record_id=source_record_id,
         )
 
     async def upsert_relationship(self, source_id: str, target_id: str, rel_type: str, props: dict[str, Any] | None = None) -> None:
         safe_type = "".join(ch for ch in rel_type.upper() if ch.isalnum() or ch == "_") or "RELATED_TO"
+        sanitized_props = _sanitize_neo4j_props(props or {})
         await self.execute(
             f"""
             MATCH (a:Entity {{id: $source_id}})
@@ -147,7 +165,7 @@ class Neo4jStore:
             """,
             source_id=source_id,
             target_id=target_id,
-            props=props or {},
+            props=sanitized_props,
         )
 
     async def replace_chunks(self, record_id: str, chunks: list[dict[str, Any]]) -> None:
@@ -357,7 +375,77 @@ class Neo4jStore:
             """
         )
         if not rows:
-            return GraphSnapshot(nodes=[], edges=[])
-        nodes = [GraphNode(**node) for node in rows[0].get("nodes", []) if node.get("id")]
-        edges = [GraphEdge(**edge) for edge in rows[0].get("edges", []) if edge.get("target")]
-        return GraphSnapshot(nodes=nodes, edges=edges)
+            return GraphSnapshot(nodes=[], edges=[], schema_summary={}, pattern_summary=[], memory_summary="Knowledge graph is empty; run sync to populate the graph.")
+
+        def serialize_value(value: Any) -> Any:
+            if hasattr(value, "isoformat"):
+                return value.isoformat()
+            if isinstance(value, (list, tuple)):
+                return [serialize_value(v) for v in value]
+            if isinstance(value, dict):
+                return {str(k): serialize_value(v) for k, v in value.items()}
+            return value
+
+        nodes = []
+        seen_nodes: set[str] = set()
+        for node in rows[0].get("nodes", []) or []:
+            if not node.get("id"):
+                continue
+            node_id = str(node["id"])
+            if node_id in seen_nodes:
+                continue
+            seen_nodes.add(node_id)
+            nodes.append(
+                GraphNode(
+                    id=node_id,
+                    label=str(node.get("label") or node.get("id")),
+                    type=str(node.get("type") or "Entity"),
+                    metadata={str(k): serialize_value(v) for k, v in (node.get("metadata") or {}).items()},
+                )
+            )
+
+        edges = []
+        seen_edges: set[tuple[str, str, str]] = set()
+        for edge in rows[0].get("edges", []) or []:
+            if not edge.get("target"):
+                continue
+            source = str(edge.get("source") or "")
+            target = str(edge.get("target") or "")
+            label = str(edge.get("label") or "RELATED_TO")
+            if not source or not target:
+                continue
+            key = (source, target, label)
+            if key in seen_edges:
+                continue
+            seen_edges.add(key)
+            edges.append(GraphEdge(source=source, target=target, label=label))
+
+        type_counts: dict[str, int] = {}
+        for node in nodes:
+            type_counts[node.type] = type_counts.get(node.type, 0) + 1
+        pattern_summary = [
+            f"{name} cluster: {count} entities" for name, count in sorted(type_counts.items(), key=lambda item: (-item[1], item[0]))[:6]
+        ]
+        snapshot = GraphSnapshot(
+            nodes=nodes,
+            edges=edges,
+            schema_summary={
+                "entity_types": sorted(type_counts),
+                "total_nodes": len(nodes),
+                "total_edges": len(edges),
+                "top_types": dict(sorted(type_counts.items(), key=lambda item: (-item[1], item[0]))[:6]),
+            },
+            pattern_summary=pattern_summary,
+            memory_summary="Knowledge graph refreshed from current customer, issue, feature, and product data. Relationships are stored and re-used for retrieval.",
+        )
+
+        schema_nodes = []
+        for entity_type, count in sorted(type_counts.items(), key=lambda item: (-item[1], item[0]))[:5]:
+            schema_id = f"schema:{entity_type.lower()}"
+            schema_nodes.append(GraphNode(id=schema_id, label=f"{entity_type} schema", type="Schema", metadata={"entity_type": entity_type, "count": count}))
+            for node in nodes:
+                if node.type == entity_type:
+                    snapshot.edges.append(GraphEdge(source=schema_id, target=node.id, label="SCHEMA_MEMBER"))
+                    break
+        snapshot.nodes.extend(schema_nodes)
+        return snapshot

@@ -1,5 +1,5 @@
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 from app.config import Settings
 from app.db.neo4j_store import Neo4jStore
@@ -19,6 +19,7 @@ class GraphRAGRetriever:
     async def retrieve(self, query: str) -> list[Evidence]:
         if not self.neo4j.available:
             return self._local_retrieve(query)
+
         semantic = []
         if self.vectors and self.vectors.available:
             query_embedding = await self.embeddings.embed(query, input_type="search_query")
@@ -26,17 +27,52 @@ class GraphRAGRetriever:
         elif self.settings.vector_store.lower() == "neo4j":
             query_embedding = await self.embeddings.embed(query, input_type="search_query")
             semantic = await self.neo4j.semantic_search(query_embedding, self.settings.vector_top_k)
+
         fulltext = await self.neo4j.fulltext_search(_lucene_query(query), self.settings.graph_top_k)
         expanded = await self.neo4j.graph_expand(_lucene_query(query), self.settings.graph_top_k)
         analytics = await self.neo4j.analytics(query)
-        return rerank_evidence([*analytics, *expanded, *semantic, *fulltext], query, self.settings.evidence_top_k)
+        ranked = rerank_evidence([*analytics, *expanded, *semantic, *fulltext], query, self.settings.evidence_top_k)
+        cleaned = [self._clean_live_noise(item) for item in ranked]
+        if cleaned:
+            return cleaned
+        return self._local_retrieve(query)
+
+    @staticmethod
+    def _clean_live_noise(item: Evidence) -> Evidence:
+        if item.snippet:
+            cleaned = re.sub(r"\s+", " ", item.snippet).strip()
+            item.snippet = cleaned[:700]
+        return item
 
     async def graph_snapshot(self) -> GraphSnapshot:
         if self.neo4j.available:
             snapshot = await self.neo4j.snapshot()
             if snapshot.nodes:
-                return snapshot
-        return self._local_snapshot()
+                return self._add_knowledge_summary(snapshot)
+        return self._add_knowledge_summary(self._local_snapshot())
+
+    @staticmethod
+    def _add_knowledge_summary(snapshot: GraphSnapshot) -> GraphSnapshot:
+        type_counts = Counter(node.type for node in snapshot.nodes)
+        relationship_counts = Counter(edge.label for edge in snapshot.edges)
+        entity_types = sorted(type_counts, key=lambda key: (-type_counts[key], key))
+        patterns = [
+            f"{name} nodes: {count}" for name, count in type_counts.most_common(6)
+        ] + [
+            f"{label} links: {count}" for label, count in relationship_counts.most_common(6)
+        ]
+        snapshot.schema_summary = {
+            "entity_types": entity_types,
+            "total_nodes": len(snapshot.nodes),
+            "total_edges": len(snapshot.edges),
+            "top_types": {key: type_counts[key] for key in entity_types[:6]},
+        }
+        snapshot.pattern_summary = patterns[:10]
+        snapshot.memory_summary = (
+            "Knowledge memory refreshed from the current customer graph, with schema patterns and relationship links "
+            "stored for retrieval and reuse."
+        )
+        return snapshot
 
     def _local_retrieve(self, query: str) -> list[Evidence]:
         records = parse_dataset(self.settings.dataset_dir)

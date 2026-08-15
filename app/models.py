@@ -53,6 +53,7 @@ class ChatResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     retrieval_steps: list[RetrievalStep] = Field(default_factory=list)
     confidence: str = "insufficient"
+    confidence_score: float = 0.0
     follow_up_questions: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -84,3 +85,7 @@ class GraphEdge(BaseModel):
 class GraphSnapshot(BaseModel):
     nodes: list[GraphNode]
     edges: list[GraphEdge]
+    schema_summary: dict[str, Any] = Field(default_factory=dict)
+    pattern_summary: list[str] = Field(default_factory=list)
+    memory_summary: str = ""
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

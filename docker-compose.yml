@@ -16,7 +16,7 @@ services:
     image: neo4j:5.23-community
     pull_policy: always
     environment:
-      NEO4J_AUTH: neo4j/password
+      NEO4J_AUTH: neo4j/Neo4jSecure2024!
       NEO4J_PLUGINS: '["apoc"]'
     ports:
       - "7474:7474"
