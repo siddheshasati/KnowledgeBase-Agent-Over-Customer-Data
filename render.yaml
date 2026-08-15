@@ -30,16 +30,22 @@ services:
         value: se-dataset
       - key: VECTOR_STORE
         value: qdrant
-      - key: NEO4J_URI
-        value: bolt://neo4j:7687
+      - key: NEO4J_HOST
+        fromService:
+          name: neo4j
+          type: pserv
+          property: host
       - key: NEO4J_USER
         value: neo4j
       - key: NEO4J_PASSWORD
         value: Neo4jSecure2024!
       - key: NEO4J_DATABASE
         value: neo4j
-      - key: QDRANT_URL
-        value: http://qdrant:6333
+      - key: QDRANT_HOST
+        fromService:
+          name: qdrant
+          type: pserv
+          property: host
       - key: QDRANT_API_KEY
         fromService:
           name: qdrant

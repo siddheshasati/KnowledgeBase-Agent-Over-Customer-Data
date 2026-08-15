@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     dataset_dir: Path = Path("se-dataset")
 
     neo4j_uri: str = "bolt://127.0.0.1:7687"
+    neo4j_host: str | None = None
+    neo4j_port: int = 7687
     neo4j_user: str = "neo4j"
     neo4j_password: str = "Neo4jSecure2024!"
     neo4j_database: str = "neo4j"
@@ -22,6 +24,8 @@ class Settings(BaseSettings):
     neo4j_aura_client_secret: str | None = None
 
     qdrant_url: str = "http://127.0.0.1:6333"
+    qdrant_host: str | None = None
+    qdrant_port: int = 6333
     qdrant_api_key: str | None = None
     qdrant_collection: str = "kb_agent_chunks"
 
@@ -64,6 +68,14 @@ class Settings(BaseSettings):
         if self.neo4j_password in {"", "password", "change-me", "neo4j"}:
             warnings.append("NEO4J_PASSWORD is not configured with a real database password.")
         return warnings
+
+    @model_validator(mode="after")
+    def construct_urls(self) -> "Settings":
+        if self.qdrant_host:
+            self.qdrant_url = f"http://{self.qdrant_host}:{self.qdrant_port}"
+        if self.neo4j_host:
+            self.neo4j_uri = f"bolt://{self.neo4j_host}:{self.neo4j_port}"
+        return self
 
 
 @lru_cache
