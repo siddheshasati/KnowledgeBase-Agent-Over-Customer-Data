@@ -24,6 +24,14 @@ configure_logging(settings.log_level)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import os
+    import logging
+    startup_logger = logging.getLogger("app.startup")
+    startup_logger.info("ENVIRONMENT KEYS: %s", list(os.environ.keys()))
+    startup_logger.info("LOADED CONFIG: neo4j_host=%s, qdrant_host=%s, postgres_dsn_configured=%s, neo4j_uri=%s, qdrant_url=%s", 
+                        settings.neo4j_host, settings.qdrant_host, 
+                        bool(settings.postgres_dsn and "localhost" not in settings.postgres_dsn and "127.0.0.1" not in settings.postgres_dsn),
+                        settings.neo4j_uri, settings.qdrant_url)
     app.state.neo4j = Neo4jStore(settings)
     app.state.chat_store = PostgresChatStore(settings)
     app.state.embeddings = EmbeddingService(settings)
