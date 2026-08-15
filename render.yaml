@@ -111,3 +111,5 @@ services:
         value: '["apoc"]'
       - key: NEO4J_server_config_strict__validation_enabled
         value: "false"
+      - key: NEO4J_SERVER_CONFIG_STRICT__VALIDATION_ENABLED
+        value: "false"
