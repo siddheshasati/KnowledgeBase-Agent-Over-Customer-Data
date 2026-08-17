@@ -1,4 +1,4 @@
-# FlytBase Knowledge Intelligence Agent
+# Knowledge Intelligence Agent
 
 Enterprise-style Knowledge Base Agent using FastAPI, Neo4j for the knowledge graph, Qdrant for vector retrieval, live FlytBase documentation retrieval, Groq for grounded answer synthesis, Cohere embeddings, and Postgres chat history.
 
@@ -13,14 +13,6 @@ Enterprise-style Knowledge Base Agent using FastAPI, Neo4j for the knowledge gra
 - Agent orchestration for intent detection, query decomposition, source selection, tool calls, evidence collection, contradiction detection, grounded generation, follow-up handling, and memory.
 - Light-mode enterprise UI with answer, evidence cards, execution steps, contradictions, history, and animated graph/tree view.
 
-## Setup
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-Copy-Item .env.example .env
-```
 
 Edit `.env` with your credentials:
 
