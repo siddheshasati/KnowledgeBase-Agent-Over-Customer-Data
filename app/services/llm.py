@@ -177,6 +177,7 @@ class LLMService:
                 logger.warning("Groq answer generation failed; using deterministic grounded fallback: %s", exc)
         return self._fallback_answer(evidence)
 
+    # Retry Attempt
     @retry(wait=wait_exponential(multiplier=1, min=1, max=8), stop=stop_after_attempt(2))
     async def _groq_grounded_answer(self, question: str, evidence: list[Evidence], contradictions: list[Contradiction]) -> dict[str, Any]:
         payload = {
