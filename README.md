@@ -14,7 +14,7 @@ Enterprise-style Knowledge Base Agent using FastAPI, Neo4j for the knowledge gra
 - Light-mode enterprise UI with answer, evidence cards, execution steps, contradictions, history, and animated graph/tree view.
 
 
-Edit `.env` with your credentials:
+Edit Environment with your credentials:
 
 - `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`
 - `QDRANT_URL`, usually `http://localhost:6333`
